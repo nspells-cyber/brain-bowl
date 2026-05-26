@@ -6,6 +6,8 @@ import AuthGate from './components/AuthGate';
 import MFAChallenge from './components/MFAChallenge';
 import MFASetup from './components/MFASetup';
 import StatsScreen from './components/StatsScreen';
+import CoachDashboard from './components/CoachDashboard';
+import AdminDashboard from './components/AdminDashboard';
 import { fetchTossups, fetchRandomBonus } from './utils/qbApi';
 import { useAuth } from './hooks/useAuth';
 import { useSession } from './hooks/useSession';
@@ -27,7 +29,7 @@ const S = {
 };
 
 export default function App() {
-  const { user, profile, aal, loading, guest, isCoach, needsMFA, needsMFASetup, signOut, continueAsGuest } = useAuth();
+  const { user, profile, aal, loading, guest, isAdmin, isCoach, needsMFA, needsMFASetup, signOut, continueAsGuest } = useAuth();
   const { saveSession } = useSession(user);
 
   const [screen, setScreen] = useState('home');
@@ -134,6 +136,12 @@ export default function App() {
   // ─── STATS ───────────────────────────────────────────────────────
   if (screen === 'stats') return <StatsScreen user={user} onBack={() => setScreen('home')} />;
 
+  // ─── COACH DASHBOARD ─────────────────────────────────────────────
+  if (screen === 'coach' && isCoach) return <CoachDashboard user={user} onBack={() => setScreen('home')} />;
+
+  // ─── ADMIN DASHBOARD ─────────────────────────────────────────────
+  if (screen === 'admin' && isAdmin) return <AdminDashboard user={user} onBack={() => setScreen('home')} />;
+
   // ─── LOADING ─────────────────────────────────────────────────────
   if (screen === 'loading') {
     return (
@@ -156,6 +164,8 @@ export default function App() {
               <span>{profile?.display_name ?? user.email}</span>
               <div style={{ display: 'flex', gap: 16 }}>
                 <button onClick={() => setScreen('stats')} style={{ background: 'none', border: 'none', color: '#C9A227', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>My Stats</button>
+                {isCoach && <button onClick={() => setScreen('coach')} style={{ background: 'none', border: 'none', color: '#20B2AA', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>My Roster</button>}
+                {isAdmin && <button onClick={() => setScreen('admin')} style={{ background: 'none', border: 'none', color: '#f5c518', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>Admin</button>}
                 <button onClick={signOut} style={{ background: 'none', border: 'none', color: '#4a4d60', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>Sign Out</button>
               </div>
             </div>

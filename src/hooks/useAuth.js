@@ -71,9 +71,10 @@ export function useAuth() {
   const signOut = () => supabase.auth.signOut();
   const continueAsGuest = () => setGuest(true);
 
+  const isAdmin = profile?.role === 'admin';
   const isCoach = profile?.role === 'coach';
   const needsMFA = isCoach && aal?.currentLevel === 'aal1' && aal?.nextLevel === 'aal2';
   const needsMFASetup = isCoach && aal?.currentLevel === 'aal1' && aal?.nextLevel === 'aal1';
 
-  return { user, profile, aal, loading, guest, isCoach, needsMFA, needsMFASetup, signOut, continueAsGuest };
+  return { user, profile, aal, loading, guest, isAdmin, isCoach, needsMFA, needsMFASetup, signOut, continueAsGuest };
 }
