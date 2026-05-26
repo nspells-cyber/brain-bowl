@@ -33,45 +33,39 @@ export function useAuth() {
   }
 
   useEffect(() => {
-    let subscription;
-    // Hard safety net: unblock loading after 6 s no matter what
+    let resolved = false;
     const safetyTimer = setTimeout(() => setLoading(false), 6000);
 
-    async function init() {
-      try {
-        const result = await raceTimeout(supabase.auth.getSession(), PROFILE_LOAD_TIMEOUT_MS);
-        const session = result?.data?.session ?? null;
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await raceTimeout(
-            Promise.allSettled([loadProfile(session.user.id), loadAal()]),
-            PROFILE_LOAD_TIMEOUT_MS,
-          );
-        }
-      } catch {
-        // still unblock
-      } finally {
+    function resolveLoading() {
+      if (!resolved) {
+        resolved = true;
         clearTimeout(safetyTimer);
         setLoading(false);
       }
-
-      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await raceTimeout(
-            Promise.allSettled([loadProfile(session.user.id), loadAal()]),
-            PROFILE_LOAD_TIMEOUT_MS,
-          );
-        } else {
-          setProfile(null);
-          setAal(null);
-        }
-      });
-      subscription = data.subscription;
     }
 
-    init();
-    return () => { clearTimeout(safetyTimer); subscription?.unsubscribe(); };
+    // Register BEFORE getSession so we don't miss SIGNED_IN fired when
+    // Supabase processes the #access_token hash from an OAuth redirect.
+    const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        await raceTimeout(
+          Promise.allSettled([loadProfile(session.user.id), loadAal()]),
+          PROFILE_LOAD_TIMEOUT_MS,
+        );
+      } else {
+        setProfile(null);
+        setAal(null);
+      }
+      resolveLoading();
+    });
+
+    // Fallback for cases where onAuthStateChange never fires (no session, no hash).
+    raceTimeout(supabase.auth.getSession(), PROFILE_LOAD_TIMEOUT_MS)
+      .then(() => resolveLoading())
+      .catch(() => resolveLoading());
+
+    return () => { clearTimeout(safetyTimer); data.subscription.unsubscribe(); };
   }, []);
 
   const signOut = () => supabase.auth.signOut();
